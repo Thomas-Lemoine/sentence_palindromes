@@ -1,64 +1,88 @@
-import itertools
+from itertools import product
+from typing import Generator
 
-import nltk
-from nltk import FreqDist
-from nltk.corpus import brown
-
-# download required corpora
-nltk.download("brown", quiet=True)
-
-# configure parameters
-TOP_N_WORDS = 5000
-MIN_LENGTH = 4
-MAX_LENGTH = 6
-
-# generate a set of top n frequent words from the brown corpus
-freq_list = FreqDist(
-    word.lower()
-    for word in brown.words()
-    if word.isalpha() and ((word.islower() and len(word) > 1) or word == "I")
-)
-top_words = {word for word, _ in freq_list.most_common(TOP_N_WORDS)}
+from src.finders.base import PalindromeCandidate, PalindromeFinder
+from src.utils import is_word_sequence_palindrome
 
 
-def is_palindrome(s: str) -> bool:
-    return s == s[::-1]
+class BruteForceFinder(PalindromeFinder):
+    """Palindrome finder using brute force search through combinations"""
+
+    def __init__(self):
+        super().__init__()
+        self.compatible_suffixes = self._precompute_suffixes()
+
+    def _precompute_suffixes(self) -> dict[str, list[str]]:
+        """For each word, find all words that could appear at the end of a palindrome starting with it"""
+        compatible = {}
+        for w1 in self.vocabulary:
+            rev_w1 = w1[::-1]
+            compatible[w1] = [
+                w2 for w2 in self.vocabulary if w2.endswith(rev_w1) or rev_w1.endswith(w2)
+            ]
+        return compatible
+
+    def _initialize_search(self) -> Generator[PalindromeCandidate, None, None]:
+        """Initialize with palindromic single words"""
+        yield from (
+            PalindromeCandidate([word])
+            for word in self.vocabulary
+            if word in self.palindromic_words
+        )
+
+    def _expand_state(
+        self, state: PalindromeCandidate
+    ) -> Generator[PalindromeCandidate, None, None]:
+        """Generate all possible expansions by trying combinations"""
+        if not state.words:
+            return
+
+        # Current first and last words
+        first_word = state.words[0]
+
+        # For single word states, try all compatible end words
+        if len(state.words) == 1:
+            for last_word in self.compatible_suffixes[first_word]:
+                sequence = [first_word, last_word]
+                if is_word_sequence_palindrome(sequence):
+                    yield PalindromeCandidate(sequence)
+            return
+
+        # For longer states, try all possible middle word combinations
+        last_word = state.words[-1]
+        length = len(state.words)
+
+        # Generate all possible middle word combinations
+        middle_combinations = product(self.vocabulary, repeat=length)
+        for middle in middle_combinations:
+            sequence = [first_word] + list(middle) + [last_word]
+            if is_word_sequence_palindrome(sequence):
+                yield PalindromeCandidate(sequence)
+
+    def _state_to_candidate(self, state: PalindromeCandidate) -> PalindromeCandidate:
+        """State is already a candidate in this implementation"""
+        return state
+
+    def _score_candidate(self, candidate: PalindromeCandidate) -> float:
+        """Simple scoring based on length"""
+        if not candidate.words:
+            return 0.0
+        return len(candidate.words) + sum(len(word) for word in candidate.words) / 100
 
 
-# build a compatibility dictionary
-def build_compatibility_dict(words):
-    compatible = {}
-    for w1 in words:
-        rev_w1 = w1[::-1]
-        compatible[w1] = [w2 for w2 in words if w2.endswith(rev_w1) or rev_w1.endswith(w2)]
-    return compatible
+def main():
+    finder = BruteForceFinder()
+
+    print(f"Vocabulary size: {len(finder.vocabulary)}")
+    print(f"Palindromic words: {len(finder.palindromic_words)}")
+    print()
+
+    print("Generating palindromes...")
+    for palindrome, metrics in finder.generate_palindromes(min_length=3, max_length=6):
+        print(f"Found: {' '.join(palindrome)}")
+        if metrics.num_palindromes % 100 == 0:
+            print(f"\nCurrent Metrics:\n{metrics}\n")
 
 
-compatible = build_compatibility_dict(top_words)
-
-
-# generate palindrome sentences
-def generate_palindromes(length):
-    if length == 1:
-        yield from (w for w in top_words if is_palindrome(w))
-        return
-
-    for w1, end_words in compatible.items():
-        for w_last in end_words:
-            if length == 2:
-                combined = w1 + w_last
-                if is_palindrome(combined):
-                    yield f"{w1} {w_last}"
-            else:
-                middle_combinations = itertools.product(top_words, repeat=length - 2)
-                for middle in middle_combinations:
-                    combined = w1 + "".join(middle) + w_last
-                    if is_palindrome(combined):
-                        yield f"{w1} {' '.join(middle)} {w_last}"
-
-
-# run the palindrome generator for lengths in the range
 if __name__ == "__main__":
-    for length in range(MIN_LENGTH, MAX_LENGTH + 1):
-        for sentence in generate_palindromes(length):
-            print(sentence)
+    main()
