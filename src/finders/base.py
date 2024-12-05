@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Generator, Iterator, TypeVar
 
 from src.metrics import PalindromeMetrics
-from utils import get_vocabulary
+from src.utils import get_vocabulary
 
 T = TypeVar("T")
 
