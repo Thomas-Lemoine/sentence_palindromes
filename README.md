@@ -6,5 +6,12 @@ This project is our attempt at finding sentence palindromes, sentences that read
 
 Run finders with uv:
 ```bash
-uv run -m src.finders.finder
+uv run -m src.finders.[finder_name]
 ```
+
+## Finders
+
+- [x] brute_force
+- [x] basic
+- [x] beam_search
+- [x] middle_out
