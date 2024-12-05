@@ -1,10 +1,11 @@
-import nltk
-from nltk.corpus import brown
-from nltk import FreqDist
 import itertools
 
+import nltk
+from nltk import FreqDist
+from nltk.corpus import brown
+
 # download required corpora
-nltk.download('brown', quiet=True)
+nltk.download("brown", quiet=True)
 
 # configure parameters
 TOP_N_WORDS = 5000
@@ -13,13 +14,16 @@ MAX_LENGTH = 6
 
 # generate a set of top n frequent words from the brown corpus
 freq_list = FreqDist(
-    word.lower() for word in brown.words() 
+    word.lower()
+    for word in brown.words()
     if word.isalpha() and ((word.islower() and len(word) > 1) or word == "I")
 )
 top_words = {word for word, _ in freq_list.most_common(TOP_N_WORDS)}
 
+
 def is_palindrome(s: str) -> bool:
     return s == s[::-1]
+
 
 # build a compatibility dictionary
 def build_compatibility_dict(words):
@@ -29,7 +33,9 @@ def build_compatibility_dict(words):
         compatible[w1] = [w2 for w2 in words if w2.endswith(rev_w1) or rev_w1.endswith(w2)]
     return compatible
 
+
 compatible = build_compatibility_dict(top_words)
+
 
 # generate palindrome sentences
 def generate_palindromes(length):
@@ -49,6 +55,7 @@ def generate_palindromes(length):
                     combined = w1 + "".join(middle) + w_last
                     if is_palindrome(combined):
                         yield f"{w1} {' '.join(middle)} {w_last}"
+
 
 # run the palindrome generator for lengths in the range
 if __name__ == "__main__":
