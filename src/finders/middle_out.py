@@ -2,7 +2,7 @@ import time
 from typing import Generator
 
 from src.finders.base import PalindromeCandidate, PalindromeFinder
-from src.utils import precompute_compatible_pairs
+from src.utils import has_repeating_pattern, precompute_compatible_pairs
 
 
 class MiddleOutFinder(PalindromeFinder):
@@ -29,7 +29,7 @@ class MiddleOutFinder(PalindromeFinder):
             for word1, compatible in self.compatible_pairs.items():
                 for word2 in compatible:
                     new_sequence = [word1, word2]
-                    if not self.has_repeating_pattern(new_sequence):
+                    if not has_repeating_pattern(new_sequence):
                         yield PalindromeCandidate(new_sequence)
         else:
             # Try extending with words that maintain palindrome property
@@ -47,7 +47,7 @@ class MiddleOutFinder(PalindromeFinder):
                     new_sequence = [word1] + sequence + [word2]
                     if self._is_word_sequence_palindrome(
                         new_sequence
-                    ) and not self.has_repeating_pattern(new_sequence):
+                    ) and not has_repeating_pattern(new_sequence):
                         yield PalindromeCandidate(new_sequence)
 
     def _state_to_candidate(self, state: PalindromeCandidate) -> PalindromeCandidate:

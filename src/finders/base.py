@@ -145,32 +145,3 @@ class PalindromeFinder(ABC):
             # If not at max length, expand state
             if candidate.length < max_length:
                 states_to_process.extend(self._expand_state(current_state))
-
-    def has_repeating_pattern(self, words: list[str], min_repetitions: int = 3) -> bool:
-        """Check if a sequence has repeating patterns
-
-        Args:
-            words: List of words to check
-            min_repetitions: Minimum number of repetitions to consider a pattern
-
-        Returns:
-            True if repeating pattern found, False otherwise
-        """
-        n = len(words)
-        # Check patterns of different lengths
-        for length in range(1, n // min_repetitions + 1):
-            # Check different starting positions
-            for start in range(n - (length * (min_repetitions - 1))):
-                pattern = words[start : start + length]
-                # Count repetitions
-                count = 1
-                pos = start + length
-                while pos + length <= n:
-                    if words[pos : pos + length] == pattern:
-                        count += 1
-                        if count >= min_repetitions:
-                            return True
-                        pos += length
-                    else:
-                        break
-        return False
