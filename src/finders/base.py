@@ -1,8 +1,10 @@
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Generator, Iterator, TypeVar
 
 from src.metrics import PalindromeMetrics
+from src.vocabulary import get_vocabulary
 
 T = TypeVar("T")
 
@@ -28,7 +30,10 @@ class PalindromeCandidate:
 class PalindromeFinder(ABC):
     """Abstract base class for palindrome finders"""
 
-    def __init__(self, vocabulary: set[str]):
+    def __init__(self, vocabulary: set[str] | None = None):
+        if vocabulary is None:
+            vocabulary = get_vocabulary()
+
         self.vocabulary = vocabulary
         # Pre-compute palindromic words for efficiency
         self.palindromic_words = {word for word in vocabulary if self._is_palindrome(word)}
@@ -102,39 +107,44 @@ class PalindromeFinder(ABC):
             Tuple of (palindrome word list, current metrics)
         """
         metrics = PalindromeMetrics()
+        start_time = time.time()
 
         # Process each initial state
-        for state in self._initialize_search():
-            # Stack/queue for search states
-            states_to_process = [state]
+        states_to_process = list(self._initialize_search())
+        seen_sequences = set()  # Track unique sequences we've seen
 
-            while states_to_process:
-                current_state = states_to_process.pop()
-                candidate = self._state_to_candidate(current_state)
+        while states_to_process:
+            current_state = states_to_process.pop()
+            candidate = self._state_to_candidate(current_state)
 
-                # Check if valid palindrome
-                if candidate.is_valid_length(
-                    min_length, max_length
-                ) and self._is_word_sequence_palindrome(candidate.words):
-                    # Update metrics
-                    metrics.num_palindromes += 1
-                    metrics.length_distribution[candidate.length] = (
-                        metrics.length_distribution.get(candidate.length, 0) + 1
-                    )
-                    metrics.max_length = max(metrics.max_length, candidate.length)
+            # Skip if we've seen this sequence
+            sequence_key = " ".join(candidate.words)
+            if sequence_key in seen_sequences:
+                continue
+            seen_sequences.add(sequence_key)
 
-                    if metrics.num_palindromes > 0:
-                        lengths = list(metrics.length_distribution.keys())
-                        counts = list(metrics.length_distribution.values())
-                        metrics.avg_length = sum(l * c for l, c in zip(lengths, counts)) / sum(
-                            counts
-                        )
+            # Check if valid palindrome
+            if candidate.is_valid_length(
+                min_length, max_length
+            ) and self._is_word_sequence_palindrome(candidate.words):
+                # Update metrics
+                metrics.num_palindromes += 1
+                metrics.length_distribution[candidate.length] = (
+                    metrics.length_distribution.get(candidate.length, 0) + 1
+                )
+                metrics.max_length = max(metrics.max_length, candidate.length)
 
-                    yield candidate.words, metrics
+                if metrics.num_palindromes > 0:
+                    lengths = list(metrics.length_distribution.keys())
+                    counts = list(metrics.length_distribution.values())
+                    metrics.avg_length = sum(l * c for l, c in zip(lengths, counts)) / sum(counts)
+                metrics.generation_time = time.time() - start_time
 
-                # If not at max length, expand state
-                if candidate.length < max_length:
-                    states_to_process.extend(self._expand_state(current_state))
+                yield candidate.words, metrics
+
+            # If not at max length, expand state
+            if candidate.length < max_length:
+                states_to_process.extend(self._expand_state(current_state))
 
     def has_repeating_pattern(self, words: list[str], min_repetitions: int = 3) -> bool:
         """Check if a sequence has repeating patterns
