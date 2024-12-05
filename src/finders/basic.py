@@ -74,17 +74,8 @@ class BasicFinder(PalindromeFinder):
         return state
 
     def _score_candidate(self, candidate: PalindromeCandidate) -> float:
-        """Score based on length and variety"""
-        if not candidate.words:
-            return 0.0
-
-        # Reward variety
-        variety_score = len(set(candidate.words)) / len(candidate.words)
-        # Reward word length
-        avg_word_length = sum(len(word) for word in candidate.words) / len(candidate.words)
-        length_score = avg_word_length / 10
-
-        return (variety_score + length_score) / 2
+        """Score using the common scoring system"""
+        return self.scorer.score_sequence(candidate.words).total_score
 
 
 def main():

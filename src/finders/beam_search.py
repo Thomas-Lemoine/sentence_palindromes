@@ -66,21 +66,8 @@ class BeamSearchFinder(PalindromeFinder):
         return state
 
     def _score_candidate(self, candidate: PalindromeCandidate) -> float:
-        """Score based on length, variety, and word lengths"""
-        if not candidate.words:
-            return 0.0
-
-        # Reward variety
-        variety_score = len(set(candidate.words)) / len(candidate.words)
-
-        # Reward longer words
-        avg_word_length = sum(len(word) for word in candidate.words) / len(candidate.words)
-        length_score = avg_word_length / 10  # Normalize to roughly 0-1 range
-
-        # Reward sequence length
-        sequence_score = len(candidate.words) / 8  # Normalize to roughly 0-1 range
-
-        return (variety_score + length_score + sequence_score) / 3
+        """Score using the common scoring system"""
+        return self.scorer.score_sequence(candidate.words).total_score
 
 
 def main():

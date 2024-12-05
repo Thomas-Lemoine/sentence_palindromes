@@ -64,10 +64,8 @@ class BruteForceFinder(PalindromeFinder):
         return state
 
     def _score_candidate(self, candidate: PalindromeCandidate) -> float:
-        """Simple scoring based on length"""
-        if not candidate.words:
-            return 0.0
-        return len(candidate.words) + sum(len(word) for word in candidate.words) / 100
+        """Score using the common scoring system"""
+        return self.scorer.score_sequence(candidate.words).total_score
 
 
 def main():

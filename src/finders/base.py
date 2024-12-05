@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Generator, Iterator, TypeVar
 
 from src.metrics import PalindromeMetrics
+from src.scoring import BALANCED_WEIGHTS, create_basic_scorer
 from src.utils import get_vocabulary
 
 T = TypeVar("T")
@@ -37,6 +38,8 @@ class PalindromeFinder(ABC):
         self.vocabulary = vocabulary
         # Pre-compute palindromic words for efficiency
         self.palindromic_words = {word for word in vocabulary if self._is_palindrome(word)}
+        word_frequencies = {word: 1 for word in vocabulary}  # Simple frequencies for now
+        self.scorer = create_basic_scorer(word_frequencies, BALANCED_WEIGHTS)
 
     @staticmethod
     def _is_palindrome(text: str) -> bool:
