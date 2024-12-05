@@ -2,7 +2,11 @@ from typing import Generator
 
 from src.finders.base import PalindromeCandidate, PalindromeFinder
 from src.trie import Trie
-from src.utils import has_repeating_pattern, is_word_sequence_palindrome
+from src.utils import (
+    has_repeating_pattern,
+    is_word_sequence_palindrome,
+    precompute_compatible_pairs,
+)
 
 
 class BasicFinder(PalindromeFinder):
@@ -13,7 +17,7 @@ class BasicFinder(PalindromeFinder):
         self.forward_trie = Trie()
         self.reverse_trie = Trie()
         self._build_tries()
-        self.compatible_pairs = self._precompute_compatible_pairs()
+        self.compatible_pairs = precompute_compatible_pairs(self.vocabulary)
 
     def _build_tries(self) -> None:
         """Build forward and reverse tries from vocabulary"""
