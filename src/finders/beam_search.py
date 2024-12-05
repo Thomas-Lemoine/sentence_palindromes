@@ -1,4 +1,4 @@
-from heapq import heappop, heappush, nlargest
+from heapq import nlargest
 from typing import Generator
 
 from src.finders.base import PalindromeCandidate, PalindromeFinder
@@ -12,6 +12,20 @@ class BeamSearchFinder(PalindromeFinder):
         super().__init__()
         self.beam_width = beam_width
         self.compatible_pairs = self._precompute_compatible_pairs()
+
+    def _precompute_compatible_pairs(self) -> dict[str, set[str]]:
+        """Find all pairs of words that could form palindromes together"""
+        pairs = {}
+        for word1 in self.vocabulary:
+            rev_word1 = word1[::-1]
+            compatible = set()
+            for word2 in self.vocabulary:
+                if word1 != word2:  # Avoid same word
+                    if self._is_palindrome(word1 + word2):
+                        compatible.add(word2)
+            if compatible:
+                pairs[word1] = compatible
+        return pairs
 
     def _initialize_search(self) -> Generator[PalindromeCandidate, None, None]:
         """Start with empty sequence and palindromic words"""
