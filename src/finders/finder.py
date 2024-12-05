@@ -45,21 +45,55 @@ class PalindromeFinder:
 
     def _get_valid_extensions(self, center: List[str]) -> Iterator[Tuple[str, str]]:
         """Get valid word pairs that could extend the current palindrome"""
+
+        # Helper to check for repeating patterns
+        def has_repeating_pattern(sequence: List[str], new_words: Tuple[str, str]) -> bool:
+            # Check if adding these words would create a sequence of 3+ identical words
+            extended = [new_words[0]] + sequence + [new_words[1]]
+
+            # Check for any repeating subsequence of length >= 3
+            n = len(extended)
+            for length in range(1, n // 2 + 1):
+                for start in range(n - 2 * length):
+                    count = 1
+                    for i in range(start + length, n - length + 1, length):
+                        if extended[i : i + length] == extended[start : start + length]:
+                            count += 1
+                        else:
+                            break
+                    if count >= 3:
+                        return True
+            return False
+
         if not center:
             # For empty center, any palindrome pair works
             for word1 in self.vocabulary:
                 for word2 in self.compatible_pairs[word1]:
-                    yield word1, word2
+                    if word1 != word2:  # Avoid same word pairs
+                        pair = (word1, word2)
+                        if not has_repeating_pattern([], pair):
+                            yield pair
         else:
             # Get prefix and suffix constraints from current palindrome
             text = "".join(center)
             for word1 in self.vocabulary:
+                # Skip if this would create immediate repetition
+                if center and word1 == center[0]:
+                    continue
+
                 combined = word1 + text
                 rev_suffix = word1[::-1]
                 possible_matches = self.reverse_trie.find_words_with_prefix(rev_suffix)
                 for word2 in possible_matches:
-                    if self._is_palindrome(center + [word1, word2[::-1]]):
-                        yield word1, word2[::-1]
+                    word2_rev = word2[::-1]
+                    # Skip if this would create immediate repetition
+                    if center and word2_rev == center[-1]:
+                        continue
+
+                    if self._is_palindrome(center + [word1, word2_rev]):
+                        pair = (word1, word2_rev)
+                        if not has_repeating_pattern(center, pair):
+                            yield pair
 
     def generate_palindromes(
         self, min_length: int = 3, max_length: int = 8
@@ -112,7 +146,7 @@ def get_vocabulary(top_n: int = 5000, min_word_len: int = 2) -> Set[str]:
     return {word for word, _ in freq_dist.most_common(top_n)}
 
 
-if __name__ == "__main__":
+def main():
     # Configure parameters
     VOCAB_SIZE = 5000
     MIN_LENGTH = 3
@@ -128,3 +162,7 @@ if __name__ == "__main__":
         print(f"Found: {' '.join(palindrome)}")
         if metrics.num_palindromes % 100 == 0:  # Print metrics periodically
             print(f"\nCurrent Metrics:\n{metrics}\n")
+
+
+if __name__ == "__main__":
+    main()
