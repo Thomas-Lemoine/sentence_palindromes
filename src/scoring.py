@@ -2,6 +2,11 @@ import math
 from dataclasses import dataclass
 from typing import Protocol
 
+import nltk
+
+from src.language_model.base import LanguageModel
+from src.language_model.bigram import BigramLanguageModel
+
 
 @dataclass
 class ScoringWeights:
@@ -61,10 +66,14 @@ class PalindromeScorer:
     """Scorer for palindrome sequences"""
 
     def __init__(
-        self, frequency_provider: FrequencyProvider, weights: ScoringWeights | None = None
+        self,
+        frequency_provider: FrequencyProvider,
+        weights: ScoringWeights | None = None,
+        language_model: LanguageModel | None = None,
     ):
         self.frequency_provider = frequency_provider
         self.weights = weights or ScoringWeights()
+        self.language_model = language_model or BigramLanguageModel()
 
     def score_sequence(self, words: list[str]) -> PalindromeScore:
         """Score a sequence of words"""
@@ -97,10 +106,14 @@ class PalindromeScorer:
         )
 
     def _calculate_variety_score(self, words: list[str]) -> float:
-        """Calculate score based on word variety"""
+        """Calculate score based on word variety and palindrome avoidance"""
         unique_ratio = len(set(words)) / len(words)
-        # Exponential bonus for variety to strongly penalize repetition
-        return math.pow(unique_ratio, 1.5)
+
+        # Penalize palindromic words
+        palindrome_ratio = sum(1 for w in words if w == w[::-1]) / len(words)
+        palindrome_penalty = math.pow(1 - palindrome_ratio, 2)
+
+        return unique_ratio * palindrome_penalty
 
     def _calculate_word_length_score(self, words: list[str]) -> float:
         """Calculate score based on word lengths"""
@@ -144,6 +157,25 @@ class PalindromeScorer:
         syllable_counts = [count_syllables(word) for word in words]
         unique_patterns = len(set(syllable_counts))
         return unique_patterns / len(words)
+
+    def _calculate_fluency_score(self, words: list[str]) -> float:
+        """Score based on natural language likelihood"""
+        # Score transitions between words
+        bigram_scores = []
+        for i in range(len(words) - 1):
+            score = self.language_model.score_transition(words[i], words[i + 1])
+            bigram_scores.append(score)
+
+        return sum(bigram_scores) / len(bigram_scores) if bigram_scores else 0.0
+
+    def _calculate_pos_variety_score(self, words: list[str]) -> float:
+        """Score based on part-of-speech patterns"""
+        pos_tags = nltk.pos_tag(words)
+        pos_sequence = [tag for _, tag in pos_tags]
+
+        # Favor varied POS patterns (mix of nouns, verbs, etc.)
+        unique_pos = len(set(pos_sequence))
+        return unique_pos / len(pos_sequence)
 
 
 def create_basic_scorer(
