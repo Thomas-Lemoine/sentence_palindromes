@@ -1,96 +1,39 @@
-from typing import Generator
+from collections import Counter
 
-from src.finders.base import PalindromeCandidate, PalindromeFinder
-from src.trie import Trie
-from src.utils import (
-    has_repeating_pattern,
-    is_word_sequence_palindrome,
-    precompute_compatible_pairs,
-)
+from src.finders.base import PalindromeFinder, SearchState
 
 
 class BasicFinder(PalindromeFinder):
-    """Basic palindrome finder using tries and compatible pair matching"""
+    """Basic palindrome finder with minimal pruning"""
 
-    def __init__(self):
-        super().__init__()
-        self.forward_trie = Trie()
-        self.reverse_trie = Trie()
-        self._build_tries()
-        self.compatible_pairs = precompute_compatible_pairs(self.vocabulary)
+    def __init__(self, vocabulary: set[str], max_repeats: int = 1):
+        super().__init__(vocabulary)
+        self.max_repeats = max_repeats
 
-    def _build_tries(self) -> None:
-        """Build forward and reverse tries from vocabulary"""
-        for word in self.vocabulary:
-            self.forward_trie.insert(word)
-            self.reverse_trie.insert(word[::-1])
+    def _should_prune(self, state: SearchState) -> bool:
+        """Only prune on repeated words"""
+        counts = Counter(state.words)
+        return any(count > self.max_repeats for count in counts.values())
 
-    def _initialize_search(self) -> Generator[PalindromeCandidate, None, None]:
-        """Start with empty center and palindromic words"""
-        yield PalindromeCandidate([])  # Empty center
-        for word in self.palindromic_words:
-            yield PalindromeCandidate([word])
-
-    def _get_valid_extensions(self, sequence: list[str]) -> Generator[tuple[str, str], None, None]:
-        """Find valid word pairs to extend the sequence"""
-        if not sequence:
-            # For empty sequences, use pre-computed compatible pairs
-            for word1 in self.vocabulary:
-                for word2 in self.compatible_pairs.get(word1, set()):
-                    if word1 != word2:  # Avoid same word pairs
-                        if not has_repeating_pattern([], (word1, word2)):
-                            yield word1, word2
-        else:
-            # Try extending with words that maintain palindrome property
-            for word1 in self.vocabulary:
-                # Skip if this would create immediate repetition
-                if sequence and word1 == sequence[0]:
-                    continue
-
-                rev_suffix = word1[::-1]
-                possible_matches = self.reverse_trie.find_words_with_prefix(rev_suffix)
-
-                for word2 in possible_matches:
-                    word2_rev = word2[::-1]
-                    # Skip if this would create immediate repetition
-                    if sequence and word2_rev == sequence[-1]:
-                        continue
-
-                    new_sequence = [word1] + sequence + [word2_rev]
-                    if is_word_sequence_palindrome(new_sequence) and not has_repeating_pattern(
-                        sequence, (word1, word2_rev)
-                    ):
-                        yield word1, word2_rev
-
-    def _expand_state(
-        self, state: PalindromeCandidate
-    ) -> Generator[PalindromeCandidate, None, None]:
-        """Expand state by adding valid word pairs to ends"""
-        for left, right in self._get_valid_extensions(state.words):
-            yield PalindromeCandidate([left] + state.words + [right])
-
-    def _state_to_candidate(self, state: PalindromeCandidate) -> PalindromeCandidate:
-        """State is already a candidate in this implementation"""
-        return state
-
-    def _score_candidate(self, candidate: PalindromeCandidate) -> float:
-        """Score using the common scoring system"""
-        return self.scorer.score_sequence(candidate.words).total_score
+    def _filter_palindrome(self, state: SearchState) -> bool:
+        """Accept all valid palindromes"""
+        return True
 
 
 def main():
-    finder = BasicFinder()
+    from src.utils import get_vocabulary
 
-    print(f"Vocabulary size: {len(finder.vocabulary)}")
-    print(f"Palindromic words: {len(finder.palindromic_words)}")
-    print(f"Compatible pairs: {sum(len(pairs) for pairs in finder.compatible_pairs.values())}")
-    print()
+    vocabulary = get_vocabulary()
+    finder = BasicFinder(vocabulary)
 
     print("Generating palindromes...")
-    for palindrome, metrics in finder.generate_palindromes(min_length=3, max_length=8):
-        print(f"Found: {' '.join(palindrome)}")
-        if metrics.num_palindromes % 100 == 0:
-            print(f"\nCurrent Metrics:\n{metrics}\n")
+    count = 0
+    for palindrome in finder.generate_palindromes(max_depth=10):
+        print(f"  {' '.join(palindrome)}")
+        count += 1
+        if count > 100:
+            print("\nFound over 100 palindromes, stopping...")
+            break
 
 
 if __name__ == "__main__":
