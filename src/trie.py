@@ -1,10 +1,9 @@
 from dataclasses import dataclass, field
-from typing import Dict, Set
 
 
 @dataclass
 class TrieNode:
-    children: Dict[str, "TrieNode"] = field(default_factory=dict)
+    children: dict[str, "TrieNode"] = field(default_factory=dict)
     is_word: bool = False
     word: str = ""
 
@@ -22,7 +21,7 @@ class Trie:
         node.is_word = True
         node.word = word
 
-    def find_words_with_prefix(self, prefix: str) -> Set[str]:
+    def find_words_with_prefix(self, prefix: str) -> set[str]:
         """Find all words that start with given prefix"""
         node = self.root
         for char in prefix:
