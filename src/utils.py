@@ -14,13 +14,15 @@ def get_vocabulary(top_n: int = 5000, min_word_len: int = 2) -> set[str]:
 
 
 def is_palindrome(text: str) -> bool:
-    """Check if a string is a palindrome"""
-    return text == text[::-1]
+    """Check if a string is a palindrome at character level, ignoring case and spaces"""
+    # Only strip spaces and lowercase when checking palindrome property
+    cleaned = "".join(c.lower() for c in text if not c.isspace())
+    return cleaned == cleaned[::-1]
 
 
 def is_word_sequence_palindrome(words: list[str]) -> bool:
-    """Check if a sequence of words forms a palindrome"""
-    return is_palindrome("".join(words))
+    """Check if a sequence of words forms a palindrome, ignoring spaces"""
+    return is_palindrome(" ".join(words))
 
 
 def find_palindromic_words(vocabulary: set[str]) -> set[str]:
