@@ -2,7 +2,7 @@ import time
 from typing import Generator
 
 from src.finders.base import PalindromeCandidate, PalindromeFinder
-from src.utils import has_repeating_pattern, precompute_compatible_pairs
+from src.utils import is_palindrome, precompute_compatible_pairs
 
 
 class MiddleOutFinder(PalindromeFinder):
@@ -27,13 +27,13 @@ class MiddleOutFinder(PalindromeFinder):
         for word1 in self.vocabulary:
             # Try adding just one word that makes it a palindrome
             new_sequence = [word1] + sequence
-            if self._is_palindrome(" ".join(new_sequence)):
+            if is_palindrome(" ".join(new_sequence)):
                 yield PalindromeCandidate(new_sequence)
 
             # Try adding word pairs
             for word2 in self.vocabulary:
                 new_sequence = [word1] + sequence + [word2]
-                if self._is_palindrome(" ".join(new_sequence)):
+                if is_palindrome(" ".join(new_sequence)):
                     yield PalindromeCandidate(new_sequence)
 
     def _state_to_candidate(self, state: PalindromeCandidate) -> PalindromeCandidate:
