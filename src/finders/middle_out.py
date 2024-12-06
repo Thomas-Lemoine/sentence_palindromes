@@ -21,34 +21,20 @@ class MiddleOutFinder(PalindromeFinder):
     def _expand_state(
         self, state: PalindromeCandidate
     ) -> Generator[PalindromeCandidate, None, None]:
-        """Expand state by adding compatible word pairs to ends"""
+        """Expand state by trying different length combinations"""
         sequence = state.words
 
-        if not sequence:
-            # For empty sequences, use pre-computed compatible pairs
-            for word1, compatible in self.compatible_pairs.items():
-                for word2 in compatible:
-                    new_sequence = [word1, word2]
-                    if not has_repeating_pattern(new_sequence):
-                        yield PalindromeCandidate(new_sequence)
-        else:
-            # Try extending with words that maintain palindrome property
-            text = "".join(sequence)
-            for word1 in self.vocabulary:
-                # Skip if this would create immediate repetition
-                if sequence and word1 == sequence[0]:
-                    continue
+        for word1 in self.vocabulary:
+            # Try adding just one word that makes it a palindrome
+            new_sequence = [word1] + sequence
+            if self._is_palindrome(" ".join(new_sequence)):
+                yield PalindromeCandidate(new_sequence)
 
-                for word2 in self.vocabulary:
-                    # Skip if this would create immediate repetition
-                    if sequence and word2 == sequence[-1]:
-                        continue
-
-                    new_sequence = [word1] + sequence + [word2]
-                    if self._is_word_sequence_palindrome(
-                        new_sequence
-                    ) and not has_repeating_pattern(new_sequence):
-                        yield PalindromeCandidate(new_sequence)
+            # Try adding word pairs
+            for word2 in self.vocabulary:
+                new_sequence = [word1] + sequence + [word2]
+                if self._is_palindrome(" ".join(new_sequence)):
+                    yield PalindromeCandidate(new_sequence)
 
     def _state_to_candidate(self, state: PalindromeCandidate) -> PalindromeCandidate:
         """State is already a candidate in this implementation"""
