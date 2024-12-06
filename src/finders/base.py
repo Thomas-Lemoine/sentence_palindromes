@@ -1,150 +1,128 @@
-import time
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Generator, Iterator, TypeVar
-
-from src.metrics import PalindromeMetrics
-from src.scoring import BALANCED_WEIGHTS, create_basic_scorer
-from src.utils import get_vocabulary
-
-T = TypeVar("T")
+from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Iterator
 
 
 @dataclass
-class PalindromeCandidate:
-    """Represents a potential palindrome during generation"""
+class PalindromeFinder:
+    vocabulary: set[str]
+    prefix_cache: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
+    suffix_cache: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
 
-    words: list[str]
-    score: float = 0.0
+    def __post_init__(self) -> None:
+        """Initialize caches after instance creation"""
+        self._build_caches()
 
-    def __str__(self) -> str:
-        return " ".join(self.words)
-
-    @property
-    def length(self) -> int:
-        return len(self.words)
-
-    def is_valid_length(self, min_length: int, max_length: int) -> bool:
-        return min_length <= self.length <= max_length
-
-
-class PalindromeFinder(ABC):
-    """Abstract base class for palindrome finders"""
-
-    def __init__(self, vocabulary: set[str] | None = None):
-        if vocabulary is None:
-            vocabulary = get_vocabulary()
-
-        self.vocabulary = vocabulary
-        # Pre-compute palindromic words for efficiency
-        self.palindromic_words = {word for word in vocabulary if self._is_palindrome(word)}
-        word_frequencies = {word: 1 for word in vocabulary}  # Simple frequencies for now
-        self.scorer = create_basic_scorer(word_frequencies, BALANCED_WEIGHTS)
+    def _build_caches(self) -> None:
+        """Build prefix and suffix caches for efficient word lookup"""
+        for word in self.vocabulary:
+            for i in range(1, len(word) + 1):
+                prefix, suffix = word[:i], word[-i:]
+                self.prefix_cache[prefix].add(word)
+                self.suffix_cache[suffix].add(word)
 
     @staticmethod
-    def _is_palindrome(text: str) -> bool:
-        """Check if a string is a palindrome"""
-        return text == text[::-1]
+    def is_palindrome(words: list[str]) -> bool:
+        """Check if word sequence forms palindrome"""
+        s = "".join(words)
+        return s == s[::-1]
 
-    def _is_word_sequence_palindrome(self, words: list[str]) -> bool:
-        """Check if a sequence of words forms a palindrome"""
-        return self._is_palindrome("".join(words))
+    def find_matches(self, pattern: str, match_start: bool = True) -> set[str]:
+        """Find all words that start/end with pattern"""
+        return (
+            self.prefix_cache.get(pattern, set())
+            if match_start
+            else self.suffix_cache.get(pattern, set())
+        )
 
-    @abstractmethod
-    def _initialize_search(self) -> Generator[T, None, None]:
-        """Initialize the search state(s)
-
-        Returns:
-            Generator yielding initial search states
+    def find_mismatch(self, words: list[str], center_pos: int) -> tuple[str, bool]:
         """
-        pass
-
-    @abstractmethod
-    def _expand_state(self, state: T) -> Generator[T, None, None]:
-        """Generate next possible states from current state
-
-        Args:
-            state: Current search state
-
-        Returns:
-            Generator yielding next possible states
+        Find what needs to be matched and on which side.
+        Returns (unmatched_portion, needs_right_match)
         """
-        pass
+        s = "".join(words)
+        left, right = s[:center_pos], s[center_pos + 1 :]
 
-    @abstractmethod
-    def _state_to_candidate(self, state: T) -> PalindromeCandidate:
-        """Convert a search state to a palindrome candidate
+        # Find length of matching portion
+        match_len = 0
+        for i in range(min(len(left), len(right))):
+            if left[-(i + 1)] != right[i]:
+                break
+            match_len = i + 1
 
-        Args:
-            state: Search state to convert
+        # Get unmatched portions
+        left_unmatched = left[:-match_len] if match_len else left
+        right_unmatched = right[match_len:] if match_len else right
 
-        Returns:
-            PalindromeCandidate representing the state
+        # Return longer unmatched portion and whether we need to match on right
+        return (
+            (left_unmatched, True)
+            if len(left_unmatched) >= len(right_unmatched)
+            else (right_unmatched, False)
+        )
+
+    def grow_palindromes(self, words: list[str], center_pos: int, depth: int = 5) -> Iterator[str]:
         """
-        pass
-
-    @abstractmethod
-    def _score_candidate(self, candidate: PalindromeCandidate) -> float:
-        """Score a palindrome candidate
-
-        Args:
-            candidate: Palindrome candidate to score
-
-        Returns:
-            Float score for the candidate
+        Recursively grow palindromes from initial words.
+        Yields valid palindromes as space-separated strings.
         """
-        pass
+        if depth <= 0:
+            return
 
-    def generate_palindromes(
-        self,
-        min_length: int = 3,
-        max_length: int = 8,
-    ) -> Iterator[tuple[list[str], PalindromeMetrics]]:
-        """Generate palindromic sentences.
+        if self.is_palindrome(words):
+            yield " ".join(words)
+            return
 
-        Args:
-            min_length: Minimum number of words in palindrome
-            max_length: Maximum number of words in palindrome
+        mismatch, needs_right = self.find_mismatch(words, center_pos)
+        if not mismatch:
+            return
 
-        Yields:
-            Tuple of (palindrome word list, current metrics)
-        """
-        metrics = PalindromeMetrics()
-        start_time = time.time()
+        # Find matching words for the reversed mismatch pattern
+        pattern = mismatch[::-1]
+        matches = self.find_matches(pattern, match_start=needs_right)
 
-        # Process each initial state
-        states_to_process = list(self._initialize_search())
-        seen_sequences = set()  # Track unique sequences we've seen
+        for word in matches:
+            new_words = words + [word] if needs_right else [word] + words
+            new_center = center_pos if needs_right else center_pos + len(word)
 
-        while states_to_process:
-            current_state = states_to_process.pop()
-            candidate = self._state_to_candidate(current_state)
+            if self.is_palindrome(new_words):
+                yield " ".join(new_words)
+            yield from self.grow_palindromes(new_words, new_center, depth - 1)
 
-            # Skip if we've seen this sequence
-            sequence_key = " ".join(candidate.words)
-            if sequence_key in seen_sequences:
-                continue
-            seen_sequences.add(sequence_key)
 
-            # Check if valid palindrome
-            if candidate.is_valid_length(
-                min_length, max_length
-            ) and self._is_word_sequence_palindrome(candidate.words):
-                # Update metrics
-                metrics.num_palindromes += 1
-                metrics.length_distribution[candidate.length] = (
-                    metrics.length_distribution.get(candidate.length, 0) + 1
-                )
-                metrics.max_length = max(metrics.max_length, candidate.length)
+def filter_palindrome(palindrome: str, min_avg_length: int = 5) -> bool:
+    """
+    Filter palindromes based on criteria:
+    - No repeated words
+    - Minimum average word length
+    - First word doesn't contain palindrome prefix
+    """
+    words = palindrome.split()
 
-                if metrics.num_palindromes > 0:
-                    lengths = list(metrics.length_distribution.keys())
-                    counts = list(metrics.length_distribution.values())
-                    metrics.avg_length = sum(l * c for l, c in zip(lengths, counts)) / sum(counts)
-                metrics.generation_time = time.time() - start_time
+    # Check for repeated words
+    if len(set(words)) != len(words):
+        return False
 
-                yield candidate.words, metrics
+    # Check average word length
+    if sum(len(word) for word in words) / len(words) < min_avg_length:
+        return False
 
-            # If not at max length, expand state
-            if candidate.length < max_length:
-                states_to_process.extend(self._expand_state(current_state))
+    # Check first word for palindrome prefix
+    first_word = words[0]
+    return not any(PalindromeFinder.is_palindrome([first_word[:i]]) for i in range(2, 7))
+
+
+def main():
+    from src.utils import get_vocabulary
+
+    vocabulary = get_vocabulary(top_n=50000)
+    finder = PalindromeFinder(vocabulary)
+
+    print("Finding palindromes...")
+    for palindrome in finder.grow_palindromes(["be"], center_pos=0, depth=6):
+        if filter_palindrome(palindrome):
+            print(palindrome)
+
+
+if __name__ == "__main__":
+    main()
