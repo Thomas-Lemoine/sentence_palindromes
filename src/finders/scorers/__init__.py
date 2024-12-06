@@ -1,5 +1,5 @@
 from .frequency import CharacterRepetitionScorer, RepetitionPenaltyScorer
-from .generic import WordLengthBatchScorer
+from .generic import WordLengthScorer
 from .linguistics import PartOfSpeechBalanceScorer
 from .llm import T5TransformerScorer, TransformerScorer
 
@@ -9,5 +9,5 @@ __all__ = [
     "RepetitionPenaltyScorer",
     "T5TransformerScorer",
     "TransformerScorer",
-    "WordLengthBatchScorer",
+    "WordLengthScorer",
 ]

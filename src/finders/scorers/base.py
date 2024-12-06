@@ -10,7 +10,7 @@ class Scorer(Protocol):
         self, context: list[str], candidates: list[str], adding_right: bool | None = None
     ) -> np.ndarray:
         """
-        Score multiple candidates in a batch.
-        Returns dict mapping each candidate to its log-odds score.
+        Score candidates.
+        Returns a numpy array of scores for each candidate.
         """
         ...
