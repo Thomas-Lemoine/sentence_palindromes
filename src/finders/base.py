@@ -1,6 +1,29 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Iterator
+from typing import Iterator, Protocol
+
+import numpy as np
+
+
+class Scorer(Protocol):
+    """Base protocol for all scorers"""
+
+    def score_candidates(
+        self, context: list[str], candidates: list[str], adding_right: bool | None = None
+    ) -> np.ndarray:
+        """
+        Score multiple candidates in a batch.
+        Returns dict mapping each candidate to its log-odds score.
+        """
+        ...
+
+
+class WordFilterStrategy(Protocol):
+    """Protocol for filtering word candidates"""
+
+    def should_keep_word(self, context: list[str], candidate: str) -> bool:
+        """Return True if candidate word should be considered"""
+        ...
 
 
 @dataclass
@@ -8,6 +31,10 @@ class PalindromeFinder:
     vocabulary: set[str]
     prefix_cache: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
     suffix_cache: dict[str, set[str]] = field(default_factory=lambda: defaultdict(set))
+
+    # Strategy fields
+    scorers: list[Scorer] = field(default_factory=list)
+    branching_factor: int = 5
 
     def __post_init__(self) -> None:
         """Initialize caches after instance creation"""
@@ -61,6 +88,46 @@ class PalindromeFinder:
             else (right_unmatched, False)
         )
 
+    def score(
+        self,
+        context: list[str],
+        candidates: list[str],
+        adding_right: bool,
+    ) -> list[float]:
+        """Returns log-odds scores for each candidate"""
+        scores = np.zeros(len(candidates))
+        for scorer in self.scorers:
+            scores += scorer.score_candidates(context, candidates, adding_right)
+        return list(scores)
+
+    def filter_candidates(
+        self,
+        words: list[str],
+        candidates: list[str],
+        adding_right: bool,
+    ) -> set[str]:
+        """Filter candidates based on scorers and return top
+        N candidates by score that are not -inf scored."""
+        if not candidates:
+            return set()
+        filtered = candidates.copy()
+        scores = self.score(words, filtered, adding_right)
+
+        # Create list of (candidate, score) tuples, filtering out -inf scores
+        scored_candidates = [
+            (candidate, score)
+            for candidate, score in zip(filtered, scores)
+            if score != float("-inf")
+        ]
+
+        # Sort by score in descending order
+        scored_candidates.sort(key=lambda x: x[1], reverse=True)
+
+        # Extract just the candidates (without scores)
+        filtered_candidates = [c for c, _ in scored_candidates]
+
+        return set(filtered_candidates[: self.branching_factor])
+
     def grow_palindromes(self, words: list[str], center_pos: int, depth: int = 5) -> Iterator[str]:
         """
         Recursively grow palindromes from initial words.
@@ -69,9 +136,10 @@ class PalindromeFinder:
         if depth <= 0:
             return
 
+        # First check if current sequence is a palindrome
         if self.is_palindrome(words):
             yield " ".join(words)
-            return
+            # Don't return - continue growing to find longer palindromes  TODO: VERIFY
 
         mismatch, needs_right = self.find_mismatch(words, center_pos)
         if not mismatch:
@@ -81,7 +149,9 @@ class PalindromeFinder:
         pattern = mismatch[::-1]
         matches = self.find_matches(pattern, match_start=needs_right)
 
-        for word in matches:
+        filtered_matches = self.filter_candidates(words, matches, needs_right)
+
+        for word in filtered_matches:
             new_words = words + [word] if needs_right else [word] + words
             new_center = center_pos if needs_right else center_pos + len(word)
 
@@ -89,40 +159,45 @@ class PalindromeFinder:
                 yield " ".join(new_words)
             yield from self.grow_palindromes(new_words, new_center, depth - 1)
 
+    def generate_palindromes(
+        self, depth: int = 5, custom_centers: list[tuple[str, int]] | None = None
+    ) -> Iterator[str]:
+        """
+        Generate palindromes from all potential centers found in vocabulary.
+        Also includes starting from meaningful seed sequences like ["be"].
+        """
+        for word, center_pos in custom_centers or []:
+            yield from self.grow_palindromes([word], center_pos, depth)
 
-def filter_palindrome(palindrome: str, min_avg_length: int = 5) -> bool:
-    """
-    Filter palindromes based on criteria:
-    - No repeated words
-    - Minimum average word length
-    - First word doesn't contain palindrome prefix
-    """
-    words = palindrome.split()
+        for word, center_pos in self.find_palindrome_centers():
+            yield from self.grow_palindromes([word], center_pos, depth)
 
-    # Check for repeated words
-    if len(set(words)) != len(words):
-        return False
+    def find_palindrome_centers(self) -> list[tuple[str, int]]:
+        """
+        Find all potential palindrome centers in vocabulary words.
+        Returns list of (word, position) tuples where position could be center of palindrome.
+        Only returns positions where there's a true palindrome opportunity.
+        """
+        results = []
 
-    # Check average word length
-    if sum(len(word) for word in words) / len(words) < min_avg_length:
-        return False
+        for word in self.vocabulary:
+            length = len(word)
+            if length < 3:  # Skip very short words
+                continue
 
-    # Check first word for palindrome prefix
-    first_word = words[0]
-    return not any(PalindromeFinder.is_palindrome([first_word[:i]]) for i in range(2, 7))
+            # For each position (excluding first two and last two characters)
+            for pos in range(1, length - 1):
+                # Skip center position of word
+                if pos == length // 2:
+                    continue
 
+                # Get entire left and right substrings
+                left = word[:pos]
+                right = word[pos + 1 :]
 
-def main():
-    from src.utils import get_vocabulary
+                # Check if left matches reverse of right (up to shorter length)
+                min_length = min(len(left), len(right))
+                if min_length > 0 and left[-min_length:] == right[:min_length][::-1]:
+                    results.append((word, pos))
 
-    vocabulary = get_vocabulary(top_n=50000)
-    finder = PalindromeFinder(vocabulary)
-
-    print("Finding palindromes...")
-    for palindrome in finder.grow_palindromes(["be"], center_pos=0, depth=6):
-        if filter_palindrome(palindrome):
-            print(palindrome)
-
-
-if __name__ == "__main__":
-    main()
+        return results
