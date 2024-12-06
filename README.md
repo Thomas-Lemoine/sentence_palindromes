@@ -9,12 +9,32 @@ Run finders with uv:
 uv run -m src.finders.[finder_name]
 ```
 
+Available finders:
+- llm
+
+Example output:
+```bash
+...
+Found: saga sill rachel notre plays lapse rose divide sores palsy alpert onleh carl lisa gas
+Found: saga sill rachel notre plays lapse rose divide sores palsy alpert onleh carl lisa gas
+Found: se saga sill rachel notre plays lapse rose divide sores palsy alpert onleh carl lisa gases
+Found: step rachel notre plays lapse rose divide sores palsy alpert onleh carpets
+Found: step rachel notre plays lapse rose divide sores palsy alpert onleh carpets
+Found: oath turret rachel notre plays lapse rose divide sores palsy alpert onleh carter ruth tao
+Found: oath turret rachel notre plays lapse rose divide sores palsy alpert onleh carter ruth tao
+Found: flesh turret rachel notre plays lapse rose divide sores palsy alpert onleh carter ruth self
+Found: flesh turret rachel notre plays lapse rose divide sores palsy alpert onleh carter ruth self
+Found: nam regret rachel notre pl
+...
+```
+
 ## Finders
 
 - [x] brute_force
 - [x] basic
 - [x] beam_search
 - [x] middle_out
+Edit: All of the above need to be translated into the new system.
 
 ## Notes
 

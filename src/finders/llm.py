@@ -38,20 +38,20 @@ if __name__ == "__main__":
         transformer_scorer,
         CharacterRepetitionScorer(),
         RepetitionPenaltyScorer(),
-        WordLengthScorer(),
+        # WordLengthScorer(),
         PartOfSpeechBalanceScorer(),
-        WordDiscriminator(words=["t", "o", "c", "n", "e", "p", "v", "h", "af", "la"]),
+        WordDiscriminator(words=["m", "t", "o", "c", "n", "e", "p", "v", "h", "af", "la"]),
     ]
 
-    vocabulary = get_vocabulary(top_n=20_000, min_word_len=1)
+    vocabulary = get_vocabulary(top_n=8_000, min_word_len=1)
     finder = PalindromeFinder(
         vocabulary=vocabulary,
         scorers=scorers,
         branching_factor=34,
     )
 
-    for palindrome in finder.grow_palindromes(["be"], center_pos=0, depth=15):
+    for palindrome in finder.grow_palindromes(["be"], center_pos=0, depth=8):
         print(f" Found: {palindrome}")
 
-    for palindrome in finder.generate_palindromes(depth=15):
+    for palindrome in finder.generate_palindromes(depth=8):
         print(f" Found: {palindrome}")
