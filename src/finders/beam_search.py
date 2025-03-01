@@ -50,15 +50,17 @@ class BeamSearchFinder(PalindromeFinder):
                         continue
 
                     new_sequence = [word1] + sequence + [word2]
-                    if is_word_sequence_palindrome(new_sequence) and not has_repeating_pattern(
+                    if is_word_sequence_palindrome(
                         new_sequence
-                    ):
+                    ) and not has_repeating_pattern(new_sequence):
                         candidate = PalindromeCandidate(new_sequence)
                         candidate.score = self._score_candidate(candidate)
                         expansions.append(candidate)
 
             # Return top-k expansions based on score
-            for candidate in nlargest(self.beam_width, expansions, key=lambda x: x.score):
+            for candidate in nlargest(
+                self.beam_width, expansions, key=lambda x: x.score
+            ):
                 yield candidate
 
     def _state_to_candidate(self, state: PalindromeCandidate) -> PalindromeCandidate:
@@ -75,7 +77,9 @@ def main():
 
     print(f"Vocabulary size: {len(finder.vocabulary)}")
     print(f"Palindromic words: {len(finder.palindromic_words)}")
-    print(f"Compatible pairs: {sum(len(pairs) for pairs in finder.compatible_pairs.values())}")
+    print(
+        f"Compatible pairs: {sum(len(pairs) for pairs in finder.compatible_pairs.values())}"
+    )
     print()
 
     print("Generating palindromes...")

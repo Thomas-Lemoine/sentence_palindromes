@@ -14,7 +14,10 @@ class CharacterRepetitionScorer(Scorer):
     max_char_frequency_ratio: float = 0.2  # No character should be >20% of total chars
 
     def score_candidates(
-        self, context: list[str], candidates: list[str], adding_right: bool | None = None
+        self,
+        context: list[str],
+        candidates: list[str],
+        adding_right: bool | None = None,
     ) -> np.ndarray:
         if not candidates:
             return np.array([])
@@ -58,7 +61,10 @@ class RepetitionPenaltyScorer(Scorer):
     window_size: int = 4  # For recent context
 
     def score_candidates(
-        self, context: list[str], candidates: list[str], adding_right: bool | None = None
+        self,
+        context: list[str],
+        candidates: list[str],
+        adding_right: bool | None = None,
     ) -> np.ndarray:
         if not candidates:
             return np.array([])
@@ -73,7 +79,8 @@ class RepetitionPenaltyScorer(Scorer):
 
             # Hard filter for immediate repetition
             if context and (
-                candidate == context[-1] or (len(context) > 1 and candidate == context[-2])
+                candidate == context[-1]
+                or (len(context) > 1 and candidate == context[-2])
             ):
                 scores[i] = float("-inf")
                 continue

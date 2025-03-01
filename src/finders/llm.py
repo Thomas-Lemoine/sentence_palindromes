@@ -13,7 +13,6 @@ from src.finders.scorers import (
     T5TransformerScorer,
     TransformerScorer,
     WordDiscriminator,
-    WordLengthScorer,
 )
 
 if __name__ == "__main__":
@@ -24,7 +23,9 @@ if __name__ == "__main__":
     if "t5" in model_name:
         model = T5ForConditionalGeneration.from_pretrained(model_name)
         tokenizer = AutoTokenizer.from_pretrained(model_name)
-        transformer_scorer = T5TransformerScorer(model, AutoTokenizer.from_pretrained(model_name))
+        transformer_scorer = T5TransformerScorer(
+            model, AutoTokenizer.from_pretrained(model_name)
+        )
     elif "bert" in model_name:
         model = BertForMaskedLM.from_pretrained(model_name)
         tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -40,7 +41,9 @@ if __name__ == "__main__":
         RepetitionPenaltyScorer(),
         # WordLengthScorer(),
         PartOfSpeechBalanceScorer(),
-        WordDiscriminator(words=["m", "t", "o", "c", "n", "e", "p", "v", "h", "af", "la"]),
+        WordDiscriminator(
+            words=["m", "t", "o", "c", "n", "e", "p", "v", "h", "af", "la"]
+        ),
     ]
 
     vocabulary = get_vocabulary(top_n=8_000, min_word_len=1)

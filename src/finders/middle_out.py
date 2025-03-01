@@ -50,7 +50,9 @@ def main():
 
     print(f"Vocabulary size: {len(finder.vocabulary)}")
     print(f"Palindromic words: {len(finder.palindromic_words)}")
-    print(f"Compatible pairs: {sum(len(pairs) for pairs in finder.compatible_pairs.values())}")
+    print(
+        f"Compatible pairs: {sum(len(pairs) for pairs in finder.compatible_pairs.values())}"
+    )
     print()
 
     print("Generating palindromes...")

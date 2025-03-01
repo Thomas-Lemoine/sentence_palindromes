@@ -18,7 +18,9 @@ class BruteForceFinder(PalindromeFinder):
         for w1 in self.vocabulary:
             rev_w1 = w1[::-1]
             compatible[w1] = [
-                w2 for w2 in self.vocabulary if w2.endswith(rev_w1) or rev_w1.endswith(w2)
+                w2
+                for w2 in self.vocabulary
+                if w2.endswith(rev_w1) or rev_w1.endswith(w2)
             ]
         return compatible
 

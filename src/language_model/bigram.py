@@ -36,7 +36,9 @@ class BigramLanguageModel(LanguageModel):
         self.stats.total_words = sum(self._word_counts.values())
         self.stats.unique_bigrams = len(self._bigram_counts)
         self.stats.total_bigrams = self._total_bigrams
-        self.stats.vocab_coverage = len(self._vocab) / len(set(w for s in corpus for w in s))
+        self.stats.vocab_coverage = len(self._vocab) / len(
+            set(w for s in corpus for w in s)
+        )
 
     def score_transition(self, word1: str, word2: str) -> float:
         """Score transition using smoothed bigram probability"""

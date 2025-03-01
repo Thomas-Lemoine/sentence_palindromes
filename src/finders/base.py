@@ -117,7 +117,9 @@ class PalindromeFinder:
 
         return set(filtered_candidates[: self.branching_factor])
 
-    def grow_palindromes(self, words: list[str], center_pos: int, depth: int = 5) -> Iterator[str]:
+    def grow_palindromes(
+        self, words: list[str], center_pos: int, depth: int = 5
+    ) -> Iterator[str]:
         """
         Recursively grow palindromes from initial words.
         Yields valid palindromes as space-separated strings.

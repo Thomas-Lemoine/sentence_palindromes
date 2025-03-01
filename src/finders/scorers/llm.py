@@ -13,7 +13,10 @@ class TransformerScorer(Scorer):
         self.top_n = top_n
 
     def score_candidates(
-        self, context: list[str], candidates: list[str], adding_right: bool | None = None
+        self,
+        context: list[str],
+        candidates: list[str],
+        adding_right: bool | None = None,
     ) -> np.ndarray:
         if not candidates:
             return np.array([])
@@ -49,7 +52,10 @@ class T5TransformerScorer(Scorer):
         self.tokenizer = tokenizer
 
     def score_candidates(
-        self, context: list[str], candidates: list[str], adding_right: bool | None = None
+        self,
+        context: list[str],
+        candidates: list[str],
+        adding_right: bool | None = None,
     ) -> np.ndarray:
         if not candidates:
             return np.array([])

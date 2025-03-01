@@ -38,7 +38,10 @@ class PartOfSpeechBalanceScorer(Scorer):
         return min(1.0, context_length / 5)  # Ramps up to full weight at length 5
 
     def score_candidates(
-        self, context: list[str], candidates: list[str], adding_right: bool | None = None
+        self,
+        context: list[str],
+        candidates: list[str],
+        adding_right: bool | None = None,
     ) -> np.ndarray:
         if not candidates:
             return np.array([])
